@@ -33,9 +33,18 @@ function appendMcpSummaryToNormal(payload) {
   const extract = summary.extract || summary.description || "";
   const image = summary.originalimage && summary.originalimage.source;
   if (!title && !extract) return;
-  normalOutput.textContent += `\n\n[MCP 요약]\n- 제목: ${title}\n- 요약: ${extract}\n`;
+  normalOutput.insertAdjacentText(
+    "beforeend",
+    `\n\n[MCP 요약]\n- 제목: ${title}\n- 요약: ${extract}\n`
+  );
   if (image) {
-    normalOutput.textContent += `- 이미지: ${image}\n`;
+    const img = document.createElement("img");
+    img.src = image;
+    img.alt = title || "MCP 이미지";
+    img.loading = "lazy";
+    img.className = "mcp-image";
+    normalOutput.appendChild(img);
+    normalOutput.insertAdjacentText("beforeend", "\n");
   }
 }
 

@@ -129,6 +129,14 @@ body {
   white-space: pre-wrap;
 }
 
+.mcp-image {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
 .notice {
   margin-top: 24px;
   border-radius: 18px;
