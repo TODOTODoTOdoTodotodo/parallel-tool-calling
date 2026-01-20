@@ -5,6 +5,7 @@ const requestIdEl = document.getElementById("request-id");
 const normalOutput = document.getElementById("normal-output");
 const mcpOutput = document.getElementById("mcp-output");
 const notice = document.getElementById("mcp-notice");
+const resetBtn = document.getElementById("reset-context");
 
 let activeRequestId = null;
 let mcpEventSource = null;
@@ -151,4 +152,13 @@ form.addEventListener("submit", async (event) => {
     setStatus("error");
     normalOutput.textContent = "일반 검색 스트리밍에 실패했습니다.";
   }
+});
+
+resetBtn.addEventListener("click", async () => {
+  await fetch("/admin/reset", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ userId: "demo-user" })
+  });
+  resetUI();
 });

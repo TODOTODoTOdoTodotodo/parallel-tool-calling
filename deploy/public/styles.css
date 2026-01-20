@@ -107,6 +107,20 @@ body {
   font-size: 14px;
 }
 
+.toolbar {
+  margin-top: 12px;
+}
+
+.toolbar .ghost {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
 .stream {
   margin-top: 24px;
 }

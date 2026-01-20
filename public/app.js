@@ -7,6 +7,7 @@ const notice = document.getElementById("mcp-notice");
 const confirmBtn = document.getElementById("confirm-mcp");
 const dismissBtn = document.getElementById("dismiss-mcp");
 const mcpOutput = document.getElementById("mcp-output");
+const resetBtn = document.getElementById("reset-context");
 
 let activeRequestId = null;
 let streamController = null;
@@ -183,4 +184,13 @@ confirmBtn.addEventListener("click", async () => {
 
 dismissBtn.addEventListener("click", () => {
   showNotice(false);
+});
+
+resetBtn.addEventListener("click", async () => {
+  await fetch("/admin/reset", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ userId: "demo-user" })
+  });
+  resetUI();
 });
