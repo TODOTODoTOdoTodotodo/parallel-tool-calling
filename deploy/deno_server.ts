@@ -130,10 +130,10 @@ async function namuWikiFetch(query: string) {
   if (!res.ok) throw new Error(`MCP_NAMU_FAILED: HTTP_${res.status}`);
   const html = await res.text();
   const text = html
-    .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]*>/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   if (!text) throw new Error("NAMU_WIKI_EMPTY");
   return { source: "namuwiki", query, content: text };
