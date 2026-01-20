@@ -10,12 +10,12 @@ It uses a Deno runtime entry that mocks the LLM stream and runs Wikipedia tool c
 3) Set the entrypoint to `deploy/deno_server.ts`
 4) Enable Deno KV for the project (required for request state)
 5) Add env vars (optional):
-   - `MCP_WIKI_BASE=https://ko.wikipedia.org`
+   - `MCP_NAMU_BASE=https://namu.wiki`
    - `MCP_TIMEOUT_MS=8000`
 
 ## Notes
 
-- The Deno entry returns mock LLM streaming (SSE) and real Wikipedia tool results.
+- The Deno entry returns mock LLM streaming (SSE) and real NamuWiki tool results.
 - Tool calling is heuristic-based in this entry (no Codex CLI in Deno Deploy).
 - Static UI is served from `deploy/public`.
 
