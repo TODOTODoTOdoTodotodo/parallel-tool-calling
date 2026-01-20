@@ -111,6 +111,7 @@ MCP example (NamuWiki article fetch):
 - `MCP_USE_MOCK=1` to use the mock MCP response.
 - `MCP_SIMULATED_DELAY_MS` (default: 2500)
 - `MCP_NAMU_BASE` (default: `https://namu.wiki`)
+- `MCP_NAMU_LOCAL_URL` (optional, e.g. `http://127.0.0.1:3890/fetch`)
 - `MCP_TOOL_MODE` (`simple` to skip LLM tool decision; default uses Codex CLI)
 - `MCP_TOOL_TIMEOUT_MS` (default: 3000)
 
