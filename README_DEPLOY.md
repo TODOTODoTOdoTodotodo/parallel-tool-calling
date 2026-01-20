@@ -18,6 +18,7 @@ It uses a Deno runtime entry that mocks the LLM stream and runs Wikipedia tool c
 - The Deno entry returns mock LLM streaming (SSE) and real Wikipedia tool results.
 - Tool calling is heuristic-based in this entry (no Codex CLI in Deno Deploy).
 - Static UI is served from `deploy/public`.
+- NamuWiki was removed because it is blocked (HTTP 403) in this environment.
 
 ## Admin
 

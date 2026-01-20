@@ -124,3 +124,4 @@ General:
 
 - This implementation stores results in memory. Replace `src/store.js` with Redis for production.
 - Replace MCP example with a real MCP server integration when ready.
+- NamuWiki MCP was removed because it is blocked in this hosted environment (HTTP 403).
