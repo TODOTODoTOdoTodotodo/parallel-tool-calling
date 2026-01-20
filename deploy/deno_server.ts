@@ -124,7 +124,8 @@ async function namuWikiFetch(query: string) {
   const res = await fetch(url, {
     headers: {
       "User-Agent": "parallel-tool-calling/0.1",
-      "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7"
+      "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
+      Referer: "https://namu.wiki/"
     }
   });
   if (!res.ok) throw new Error(`MCP_NAMU_FAILED: HTTP_${res.status}`);
@@ -223,7 +224,9 @@ async function handleSearch(req: Request) {
         record.status = STATUS.READY;
         setRecord(record);
       })
-      .catch(() => {
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "mcp_failed";
+        record.results.mcp = { error: message };
         record.status = STATUS.FAILED;
         setRecord(record);
       });
@@ -291,7 +294,9 @@ async function handleMcp(req: Request, requestId: string) {
   if (!record) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
   if (record.userId !== userId) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 });
   if (record.status === STATUS.EXPIRED) return new Response(JSON.stringify({ error: "expired" }), { status: 410 });
-  if (record.status === STATUS.FAILED) return new Response(JSON.stringify({ error: "mcp_failed" }), { status: 424 });
+  if (record.status === STATUS.FAILED) {
+    return new Response(JSON.stringify(record.results.mcp || { error: "mcp_failed" }), { status: 424 });
+  }
   if (record.status !== STATUS.READY) return new Response(JSON.stringify({ error: "mcp_not_ready" }), { status: 409 });
   return Response.json(record.results.mcp || {});
 }

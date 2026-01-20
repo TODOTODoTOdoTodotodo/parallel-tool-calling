@@ -126,6 +126,8 @@ function createApp(options = {}) {
           console.log("mcp_skipped", { requestId, durationMs: duration });
           return;
         }
+        const message = error && error.message ? error.message : "mcp_failed";
+        store.setMcpResults(requestId, { error: message });
         store.setFailed(requestId);
         console.log("mcp_failed", { requestId, durationMs: duration, reason: error.message });
       });
@@ -221,7 +223,8 @@ function createApp(options = {}) {
       return res.status(410).json({ error: "expired" });
     }
     if (record.status === STATUS.FAILED) {
-      return res.status(424).json({ error: "mcp_failed" });
+      const payload = record.results.mcp || { error: "mcp_failed" };
+      return res.status(424).json(payload);
     }
     if (record.status !== STATUS.READY) {
       return res.status(409).json({ error: "mcp_not_ready" });

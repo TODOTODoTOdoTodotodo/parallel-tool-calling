@@ -11,7 +11,8 @@ async function fetchNamuWiki(title) {
   const html = await requestText(url, {
     headers: {
       "User-Agent": "parallel-tool-calling/0.1",
-      "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7"
+      "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
+      Referer: "https://namu.wiki/"
     }
   });
 
