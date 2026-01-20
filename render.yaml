@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: parallel-tool-calling
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: LLM_PROVIDER
+        value: codex
+      - key: MCP_SIMULATED_DELAY_MS
+        value: 1200
+      - key: MCP_WIKI_BASE
+        value: https://ko.wikipedia.org
