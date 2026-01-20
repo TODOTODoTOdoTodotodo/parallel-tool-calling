@@ -67,6 +67,17 @@ Server-sent events:
 - `event: mcp-failed`
 - `event: mcp-expired`
 
+### POST /admin/reset
+
+Request body:
+
+```json
+{ "userId": "optional" }
+```
+
+- If `userId` is provided, clears that user's previous context.
+- If omitted, clears all stored contexts (in-memory).
+
 ## Demo UI
 
 - `public/index.html`, `public/app.js`, `public/styles.css` provide a minimal end-to-end UI.

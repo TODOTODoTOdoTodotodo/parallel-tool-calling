@@ -25,6 +25,11 @@ function setPreviousContext(userId, query, answer, mcpSummary) {
   });
 }
 
+function clearPreviousContext(userId) {
+  if (!userId) return false;
+  return userContextStore.delete(userId);
+}
+
 function resolveUserId(req) {
   const headerUser = req.header("x-user-id");
   const bodyUser = req.body && req.body.userContext && req.body.userContext.userId;
@@ -283,6 +288,16 @@ function createApp(options = {}) {
 
     store.on("mcp-ready", onReady);
     req.on("close", cleanup);
+  });
+
+  app.post("/admin/reset", (req, res) => {
+    const { userId } = req.body || {};
+    if (!userId) {
+      userContextStore.clear();
+      return res.json({ ok: true, scope: "all" });
+    }
+    const removed = clearPreviousContext(userId);
+    return res.json({ ok: true, scope: "user", removed });
   });
 
   return app;

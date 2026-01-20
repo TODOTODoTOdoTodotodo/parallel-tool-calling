@@ -79,6 +79,23 @@ async function setPreviousContext(userId: string, value: string) {
   }
 }
 
+async function clearPreviousContext(userId?: string) {
+  if (!userId) {
+    previousContext.clear();
+    if (kv) {
+      for await (const entry of kv.list({ prefix: ["context"] })) {
+        await kv.delete(entry.key);
+      }
+    }
+    return { scope: "all", removed: true };
+  }
+  previousContext.delete(userId);
+  if (kv) {
+    await kv.delete(["context", userId]);
+  }
+  return { scope: "user", removed: true };
+}
+
 function shouldCallToolByHeuristic(query: string) {
   const patterns = [
     /\b(what|who|where|when|why|how)\b/i,
@@ -357,6 +374,13 @@ serve(async (req) => {
   const matchStream = path.match(/^\/search\/([^/]+)\/stream$/);
   if (req.method === "GET" && matchStream) {
     return handleStream(req, matchStream[1]);
+  }
+
+  if (req.method === "POST" && path === "/admin/reset") {
+    const body = await req.json().catch(() => ({}));
+    const userId = body?.userId ? String(body.userId) : undefined;
+    const result = await clearPreviousContext(userId);
+    return Response.json({ ok: true, ...result });
   }
 
   if (req.method === "GET" && path === "/") {
