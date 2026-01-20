@@ -21,6 +21,7 @@ type RequestRecord = {
 
 const store = new Map<string, RequestRecord>();
 const subscribers = new Map<string, Set<(event: string, data: unknown) => void>>();
+const previousContext = new Map<string, string>();
 
 const DEFAULT_TTL_MS = Number(Deno.env.get("SEARCH_TTL_MS") || 1000 * 60 * 10);
 const MCP_TIMEOUT_MS = Number(Deno.env.get("MCP_TIMEOUT_MS") || 8000);
@@ -170,6 +171,8 @@ async function handleSearch(req: Request) {
     results: { normal: null, mcp: null }
   };
   store.set(requestId, record);
+  const prev = previousContext.get(userId) || "";
+  (record as RequestRecord & { previous?: string }).previous = prev;
 
   const shouldCall = shouldCallToolByHeuristic(query);
   if (shouldCall) {
@@ -197,25 +200,30 @@ async function handleSearch(req: Request) {
 
   const url = new URL(req.url);
   const wantsStream = url.searchParams.get("stream") === "true";
+  const previous = (record as RequestRecord & { previous?: string }).previous;
   if (!wantsStream) {
+    const answer = previous
+      ? `LLM mock answer for \"${query}\". (previous: ${previous})`
+      : `LLM mock answer for \"${query}\".`;
     record.results.normal = {
-      results: [
-        { type: "llm", answer: `LLM mock answer for \"${query}\".`, source: "llm" }
-      ]
+      results: [{ type: "llm", answer, source: "llm" }]
     };
+    previousContext.set(userId, answer);
     return Response.json({ requestId, results: record.results.normal.results, status: STATUS.PENDING });
   }
 
   const stream = new ReadableStream({
     start(controller) {
       writeSse(controller, "normal-start", { requestId });
-      const text = `LLM mock answer for \"${query}\".`;
+      const prevText = previous ? ` (previous: ${previous})` : "";
+      const text = `LLM mock answer for "${query}".${prevText}`;
       const parts = text.split(" ");
       let idx = 0;
       const interval = setInterval(() => {
         if (idx >= parts.length) {
           clearInterval(interval);
           record.results.normal = { results: [{ type: "llm", answer: text, source: "llm" }] };
+          previousContext.set(userId, text);
           writeSse(controller, "normal-done", { requestId });
           controller.close();
           return;

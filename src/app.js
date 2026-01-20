@@ -9,6 +9,20 @@ const DEFAULT_TTL_MS = Number(process.env.SEARCH_TTL_MS || 1000 * 60 * 10);
 const DEFAULT_MCP_TIMEOUT_MS = Number(process.env.MCP_TIMEOUT_MS || 8000);
 
 const store = new SearchStore();
+const userContextStore = new Map();
+
+function getPreviousContext(userId) {
+  return userContextStore.get(userId) || null;
+}
+
+function setPreviousContext(userId, query, answer) {
+  if (!userId) return;
+  userContextStore.set(userId, {
+    query,
+    answer,
+    updatedAt: Date.now()
+  });
+}
 
 function resolveUserId(req) {
   const headerUser = req.header("x-user-id");
@@ -52,6 +66,12 @@ function createApp(options = {}) {
 
     const requestId = randomUUID();
     store.createRequest({ requestId, userId, query, ttlMs });
+    const previousContext = getPreviousContext(userId);
+    const enrichedContext = {
+      ...(userContext || {}),
+      userId,
+      previousContext
+    };
 
     const startedAt = Date.now();
     const mcpPromise = Promise.resolve()
@@ -104,7 +124,7 @@ function createApp(options = {}) {
 
       let answer = "";
       try {
-        for await (const chunk of streamNormalAnswer(query, userContext)) {
+        for await (const chunk of streamNormalAnswer(query, enrichedContext)) {
           answer += chunk;
           sendEvent("normal-chunk", { delta: chunk });
         }
@@ -118,6 +138,7 @@ function createApp(options = {}) {
           ]
         };
         store.setNormalResults(requestId, normalPayload);
+        setPreviousContext(userId, query, answer);
         sendEvent("normal-done", { requestId });
       } catch (error) {
         sendEvent("normal-error", { requestId, message: "normal_search_failed" });
@@ -128,8 +149,10 @@ function createApp(options = {}) {
     } else {
       let normalPayload;
       try {
-        normalPayload = await normalSearchProvider(query, userContext);
+        normalPayload = await normalSearchProvider(query, enrichedContext);
         store.setNormalResults(requestId, normalPayload);
+        const firstAnswer = normalPayload.results?.[0]?.answer || "";
+        setPreviousContext(userId, query, firstAnswer);
       } catch (error) {
         return res.status(502).json({ error: "normal_search_failed" });
       }

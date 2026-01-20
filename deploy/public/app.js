@@ -22,6 +22,15 @@ function showNotice(visible) {
   notice.hidden = !visible;
 }
 
+function appendMcpSummaryToNormal(payload) {
+  const summary = payload && payload.summary ? payload.summary : null;
+  if (!summary) return;
+  const title = summary.title || "";
+  const extract = summary.extract || summary.description || "";
+  if (!title && !extract) return;
+  normalOutput.textContent += `\n\n[MCP 요약]\n- 제목: ${title}\n- 요약: ${extract}\n`;
+}
+
 function resetUI() {
   normalOutput.textContent = "";
   mcpOutput.textContent = "";
@@ -97,6 +106,7 @@ function listenForMcp(requestId) {
       const payload = await response.json();
       setStatus("ready");
       showNotice(true);
+      appendMcpSummaryToNormal(payload);
       mcpOutput.textContent = JSON.stringify(payload, null, 2);
     } catch (error) {
       setStatus("failed");

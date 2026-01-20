@@ -28,6 +28,7 @@ async function* openAiStreamAnswer(query, userContext) {
   if (!apiKey) {
     throw new Error("LLM_API_KEY_REQUIRED");
   }
+  const previousContext = userContext && userContext.previousContext;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -40,8 +41,14 @@ async function* openAiStreamAnswer(query, userContext) {
       stream: true,
       messages: [
         { role: "system", content: "You are a concise search assistant." },
+        previousContext
+          ? {
+              role: "system",
+              content: `Previous context: ${previousContext.query} | ${previousContext.answer}`
+            }
+          : null,
         { role: "user", content: safeQuery }
-      ],
+      ].filter(Boolean),
       user: userContext && userContext.userId ? String(userContext.userId) : undefined
     })
   });
@@ -89,8 +96,12 @@ async function* codexCliStreamAnswer(query, userContext) {
     args.push("-m", model);
   }
 
+  const previousContext = userContext && userContext.previousContext;
   const prompt = [
     "You are a concise search assistant. Answer the user query in Korean.",
+    previousContext
+      ? `Previous context: ${previousContext.query} | ${previousContext.answer}`
+      : null,
     `User query: ${safeQuery}`,
     userContext && userContext.userId ? `User id: ${userContext.userId}` : null
   ]
