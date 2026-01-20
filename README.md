@@ -107,13 +107,11 @@ OpenAI-compatible (optional):
 - `LLM_API_BASE` (default: `https://api.openai.com/v1/chat/completions`)
 - `LLM_API_KEY` (required when `LLM_PROVIDER=openai`)
 
-MCP example (NamuWiki article fetch):
+MCP example (Wikipedia search + summary API):
 - `MCP_USE_MOCK=1` to use the mock MCP response.
 - `MCP_SIMULATED_DELAY_MS` (default: 2500)
-- `MCP_NAMU_BASE` (default: `https://namu.wiki`)
-- `MCP_NAMU_LOCAL_URL` (optional, e.g. `http://127.0.0.1:3890/fetch`)
-- `MCP_NAMU_TIMEOUT_MS` (default: 6000)
-- `MCP_NAMU_MAX_CHARS` (default: 4000)
+- `MCP_USER_AGENT` (optional, sent to Wikipedia API)
+- `MCP_WIKI_BASE` (default: `https://ko.wikipedia.org`)
 - `MCP_TOOL_MODE` (`simple` to skip LLM tool decision; default uses Codex CLI)
 - `MCP_TOOL_TIMEOUT_MS` (default: 3000)
 

@@ -31,9 +31,7 @@ try {
 
 const DEFAULT_TTL_MS = Number(Deno.env.get("SEARCH_TTL_MS") || 1000 * 60 * 10);
 const MCP_TIMEOUT_MS = Number(Deno.env.get("MCP_TIMEOUT_MS") || 8000);
-const MCP_NAMU_BASE = Deno.env.get("MCP_NAMU_BASE") || "https://namu.wiki";
-const MCP_NAMU_LOCAL_URL = Deno.env.get("MCP_NAMU_LOCAL_URL") || "";
-const MCP_NAMU_MAX_CHARS = Number(Deno.env.get("MCP_NAMU_MAX_CHARS") || 4000);
+const MCP_WIKI_BASE = Deno.env.get("MCP_WIKI_BASE") || "https://ko.wikipedia.org";
 
 function createId() {
   return crypto.randomUUID();
@@ -121,37 +119,26 @@ function keywordFromQuery(query: string) {
   return text.split(/\s+/)[0] || text;
 }
 
-async function namuWikiFetch(query: string) {
-  if (MCP_NAMU_LOCAL_URL) {
-    const url = `${MCP_NAMU_LOCAL_URL}?title=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
-      headers: { "x-namu-local": "1" }
-    });
-    if (!res.ok) throw new Error(`MCP_NAMU_FAILED: HTTP_${res.status}`);
-    const payload = await res.json();
-    const content = payload?.content;
-    if (!content) throw new Error("NAMU_WIKI_EMPTY");
-    return { source: "namuwiki", query, content: String(content).slice(0, MCP_NAMU_MAX_CHARS) };
-  }
-
-  const url = `${MCP_NAMU_BASE}/w/${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "parallel-tool-calling/0.1",
-      "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
-      Referer: "https://namu.wiki/"
-    }
+async function wikipediaSearch(query: string) {
+  const searchUrl = `${MCP_WIKI_BASE}/w/rest.php/v1/search/page?q=${encodeURIComponent(
+    query
+  )}&limit=1`;
+  const searchRes = await fetch(searchUrl, {
+    headers: { "User-Agent": "parallel-tool-calling/0.1" }
   });
-  if (!res.ok) throw new Error(`MCP_NAMU_FAILED: HTTP_${res.status}`);
-  const html = await res.text();
-  const text = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!text) throw new Error("NAMU_WIKI_EMPTY");
-  return { source: "namuwiki", query, content: text.slice(0, MCP_NAMU_MAX_CHARS) };
+  if (!searchRes.ok) throw new Error(`MCP_WIKI_FAILED: HTTP_${searchRes.status}`);
+  const searchJson = await searchRes.json();
+  const first = searchJson?.pages?.[0];
+  if (!first?.title) throw new Error("MCP_WIKI_EMPTY");
+  const summaryUrl = `${MCP_WIKI_BASE}/api/rest_v1/page/summary/${encodeURIComponent(
+    first.title
+  )}`;
+  const summaryRes = await fetch(summaryUrl, {
+    headers: { "User-Agent": "parallel-tool-calling/0.1" }
+  });
+  if (!summaryRes.ok) throw new Error(`MCP_WIKI_FAILED: HTTP_${summaryRes.status}`);
+  const summary = await summaryRes.json();
+  return { source: "wikipedia", query, search: searchJson, summary };
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
@@ -225,9 +212,9 @@ async function handleSearch(req: Request) {
   const shouldCall = shouldCallToolByHeuristic(query);
   if (shouldCall) {
     const keyword = keywordFromQuery(query) || query;
-    const mcpPromise = namuWikiFetch(keyword).catch(async (error) => {
-      if (String(error?.message).includes("NAMU_WIKI_EMPTY") && keyword !== query) {
-        return namuWikiFetch(query);
+    const mcpPromise = wikipediaSearch(keyword).catch(async (error) => {
+      if (String(error?.message).includes("MCP_WIKI_EMPTY") && keyword !== query) {
+        return wikipediaSearch(query);
       }
       throw error;
     });
