@@ -20,8 +20,14 @@ type RequestRecord = {
 };
 
 const store = new Map<string, RequestRecord>();
-const subscribers = new Map<string, Set<(event: string, data: unknown) => void>>();
 const previousContext = new Map<string, string>();
+let kv: Deno.Kv | null = null;
+
+try {
+  kv = await Deno.openKv();
+} catch (_error) {
+  kv = null;
+}
 
 const DEFAULT_TTL_MS = Number(Deno.env.get("SEARCH_TTL_MS") || 1000 * 60 * 10);
 const MCP_TIMEOUT_MS = Number(Deno.env.get("MCP_TIMEOUT_MS") || 8000);
@@ -43,22 +49,34 @@ function isExpired(record: RequestRecord) {
   return Date.now() > record.expiresAt;
 }
 
-function notify(requestId: string, event: string, data: unknown) {
-  const set = subscribers.get(requestId);
-  if (!set) return;
-  for (const fn of set) fn(event, data);
+async function getRecord(requestId: string): Promise<RequestRecord | null> {
+  if (kv) {
+    const entry = await kv.get<RequestRecord>(["request", requestId]);
+    return entry.value ?? null;
+  }
+  return store.get(requestId) ?? null;
 }
 
-function subscribe(requestId: string, fn: (event: string, data: unknown) => void) {
-  if (!subscribers.has(requestId)) subscribers.set(requestId, new Set());
-  subscribers.get(requestId)!.add(fn);
+async function setRecord(record: RequestRecord) {
+  store.set(record.requestId, record);
+  if (kv) {
+    await kv.set(["request", record.requestId], record);
+  }
 }
 
-function unsubscribe(requestId: string, fn: (event: string, data: unknown) => void) {
-  const set = subscribers.get(requestId);
-  if (!set) return;
-  set.delete(fn);
-  if (set.size === 0) subscribers.delete(requestId);
+async function getPreviousContext(userId: string) {
+  if (kv) {
+    const entry = await kv.get<string>(["context", userId]);
+    return entry.value ?? "";
+  }
+  return previousContext.get(userId) || "";
+}
+
+async function setPreviousContext(userId: string, value: string) {
+  previousContext.set(userId, value);
+  if (kv) {
+    await kv.set(["context", userId], value);
+  }
 }
 
 function shouldCallToolByHeuristic(query: string) {
@@ -170,8 +188,8 @@ async function handleSearch(req: Request) {
     expiresAt: Date.now() + DEFAULT_TTL_MS,
     results: { normal: null, mcp: null }
   };
-  store.set(requestId, record);
-  const prev = previousContext.get(userId) || "";
+  await setRecord(record);
+  const prev = await getPreviousContext(userId);
   (record as RequestRecord & { previous?: string }).previous = prev;
 
   const shouldCall = shouldCallToolByHeuristic(query);
@@ -188,11 +206,11 @@ async function handleSearch(req: Request) {
       .then((payload) => {
         record.results.mcp = payload;
         record.status = STATUS.READY;
-        notify(requestId, "mcp-ready", { requestId });
+        setRecord(record);
       })
       .catch(() => {
         record.status = STATUS.FAILED;
-        notify(requestId, "mcp-failed", { requestId });
+        setRecord(record);
       });
   } else {
     record.status = STATUS.FAILED;
@@ -208,7 +226,7 @@ async function handleSearch(req: Request) {
     record.results.normal = {
       results: [{ type: "llm", answer, source: "llm" }]
     };
-    previousContext.set(userId, answer);
+    await setPreviousContext(userId, answer);
     return Response.json({ requestId, results: record.results.normal.results, status: STATUS.PENDING });
   }
 
@@ -223,7 +241,8 @@ async function handleSearch(req: Request) {
         if (idx >= parts.length) {
           clearInterval(interval);
           record.results.normal = { results: [{ type: "llm", answer: text, source: "llm" }] };
-          previousContext.set(userId, text);
+          setRecord(record);
+          setPreviousContext(userId, text);
           writeSse(controller, "normal-done", { requestId });
           controller.close();
           return;
@@ -238,17 +257,20 @@ async function handleSearch(req: Request) {
 }
 
 async function handleStatus(req: Request, requestId: string) {
-  const record = store.get(requestId);
+  const record = await getRecord(requestId);
   const userId = resolveUserId(req);
   if (!userId) return new Response(JSON.stringify({ error: "user_required" }), { status: 400 });
   if (!record) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
   if (record.userId !== userId) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 });
-  if (isExpired(record)) record.status = STATUS.EXPIRED;
+  if (isExpired(record)) {
+    record.status = STATUS.EXPIRED;
+    await setRecord(record);
+  }
   return Response.json({ status: record.status });
 }
 
 async function handleMcp(req: Request, requestId: string) {
-  const record = store.get(requestId);
+  const record = await getRecord(requestId);
   const userId = resolveUserId(req);
   if (!userId) return new Response(JSON.stringify({ error: "user_required" }), { status: 400 });
   if (!record) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
@@ -260,48 +282,54 @@ async function handleMcp(req: Request, requestId: string) {
 }
 
 async function handleStream(req: Request, requestId: string) {
-  const record = store.get(requestId);
+  const record = await getRecord(requestId);
   const userId = resolveUserId(req);
   if (!userId) return new Response(JSON.stringify({ error: "user_required" }), { status: 400 });
   if (!record) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
   if (record.userId !== userId) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 });
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const send = (event: string, data: unknown) => writeSse(controller, event, data);
-      if (record.status === STATUS.READY) {
-        send("mcp-ready", { requestId });
-        controller.close();
-        return;
-      }
-      if (record.status === STATUS.FAILED) {
-        send("mcp-failed", { requestId });
-        controller.close();
-        return;
-      }
-      if (record.status === STATUS.EXPIRED) {
-        send("mcp-expired", { requestId });
+      let current = record;
+      if (!current) {
         controller.close();
         return;
       }
 
-      const handler = (event: string, data: unknown) => {
-        if ((data as { requestId?: string })?.requestId !== requestId) return;
-        send(event, data);
-        unsubscribe(requestId, handler);
-        controller.close();
+      const poll = async () => {
+        const latest = await getRecord(requestId);
+        if (!latest) return;
+        current = latest;
+        if (current.status === STATUS.READY) {
+          send("mcp-ready", { requestId });
+          controller.close();
+          return;
+        }
+        if (current.status === STATUS.FAILED) {
+          send("mcp-failed", { requestId });
+          controller.close();
+          return;
+        }
+        if (current.status === STATUS.EXPIRED) {
+          send("mcp-expired", { requestId });
+          controller.close();
+          return;
+        }
+        setTimeout(poll, 500);
       };
 
-      subscribe(requestId, handler);
-      const delay = Math.max(record.expiresAt - Date.now(), 0);
+      const delay = Math.max(current.expiresAt - Date.now(), 0);
       setTimeout(() => {
-        if (record.status === STATUS.PENDING) {
-          record.status = STATUS.EXPIRED;
+        if (current.status === STATUS.PENDING) {
+          current.status = STATUS.EXPIRED;
+          setRecord(current);
           send("mcp-expired", { requestId });
         }
-        unsubscribe(requestId, handler);
         controller.close();
       }, delay);
+
+      poll();
     }
   });
 
