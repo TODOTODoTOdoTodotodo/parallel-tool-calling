@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>병렬 툴 호출 데모</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Space+Grotesk:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="ambient"></div>
+    <main class="shell">
+      <header class="hero">
+        <p class="eyebrow">Parallel Tool Calling</p>
+        <h1>LLM 답변 + 위키 확장 결과를 동시에 확인합니다.</h1>
+        <p class="subtitle">
+          LLM 스트리밍이 시작되면 위키 검색을 병렬로 수행하고, 결과가 준비되면
+          즉시 표시합니다.
+        </p>
+      </header>
+
+      <section class="card">
+        <form id="search-form" class="search-bar">
+          <input
+            id="query"
+            name="query"
+            type="text"
+            placeholder="예: 예쁜꼬마선충 설명과 커넥텀 요약"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">검색</button>
+        </form>
+        <div class="meta">
+          <span id="request-id">requestId: -</span>
+          <span id="status">status: -</span>
+        </div>
+
+        <div class="split">
+          <div class="stream">
+            <h2>LLM 답변 스트리밍</h2>
+            <div id="normal-output" class="panel"></div>
+          </div>
+          <div class="stream">
+            <h2>MCP 확장 결과</h2>
+            <pre id="mcp-output" class="panel"></pre>
+          </div>
+        </div>
+
+        <div id="mcp-notice" class="notice" hidden>
+          <div>
+            <strong>잠깐! 유용한 검색결과가 더 있어요.</strong>
+            <p>병렬로 준비된 MCP 결과가 있습니다.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

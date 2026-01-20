@@ -123,6 +123,30 @@ function sseHeaders() {
   };
 }
 
+function contentTypeFor(pathname: string) {
+  if (pathname.endsWith(".html")) return "text/html; charset=utf-8";
+  if (pathname.endsWith(".css")) return "text/css; charset=utf-8";
+  if (pathname.endsWith(".js")) return "application/javascript; charset=utf-8";
+  if (pathname.endsWith(".json")) return "application/json; charset=utf-8";
+  return "application/octet-stream";
+}
+
+async function serveStatic(pathname: string) {
+  const base = new URL("./public/", import.meta.url);
+  const target = new URL(pathname.replace(/^\/+/, ""), base);
+  try {
+    const file = await Deno.readFile(target);
+    return new Response(file, {
+      headers: { "Content-Type": contentTypeFor(pathname) }
+    });
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 function writeSse(controller: ReadableStreamDefaultController, event: string, data: unknown) {
   const payload = `event: ${event}\n` + `data: ${JSON.stringify(data)}\n\n`;
   controller.enqueue(new TextEncoder().encode(payload));
@@ -300,7 +324,14 @@ serve(async (req) => {
   }
 
   if (req.method === "GET" && path === "/") {
+    const file = await serveStatic("index.html");
+    if (file) return file;
     return new Response("OK", { status: 200 });
+  }
+
+  if (req.method === "GET") {
+    const asset = await serveStatic(path);
+    if (asset) return asset;
   }
 
   return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
