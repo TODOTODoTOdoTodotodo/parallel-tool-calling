@@ -1,0 +1,19 @@
+# Cardless Deploy (Deno Deploy)
+
+This option avoids credit card requirements and is suitable for demo validation.
+It uses a Deno runtime entry that mocks the LLM stream and runs Wikipedia tool calls.
+
+## Steps
+
+1) Create a Deno Deploy project: https://dash.deno.com
+2) Connect the GitHub repo: `parallel-tool-calling`
+3) Set the entrypoint to `deploy/deno_server.ts`
+4) Add env vars (optional):
+   - `MCP_WIKI_BASE=https://ko.wikipedia.org`
+   - `MCP_TIMEOUT_MS=8000`
+
+## Notes
+
+- The Deno entry returns mock LLM streaming (SSE) and real Wikipedia tool results.
+- Tool calling is heuristic-based in this entry (no Codex CLI in Deno Deploy).
+- Use the demo UI from the Node server locally if you need the full UI.
