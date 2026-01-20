@@ -44,7 +44,11 @@ async function* openAiStreamAnswer(query, userContext) {
         previousContext
           ? {
               role: "system",
-              content: `Previous context: ${previousContext.query} | ${previousContext.answer}`
+              content: `Previous context: ${previousContext.query} | ${previousContext.answer}${
+                previousContext.mcpSummary
+                  ? ` | MCP: ${previousContext.mcpSummary.title} | ${previousContext.mcpSummary.extract} | ${previousContext.mcpSummary.image || ""}`
+                  : ""
+              }`
             }
           : null,
         { role: "user", content: safeQuery }
@@ -100,7 +104,11 @@ async function* codexCliStreamAnswer(query, userContext) {
   const prompt = [
     "You are a concise search assistant. Answer the user query in Korean.",
     previousContext
-      ? `Previous context: ${previousContext.query} | ${previousContext.answer}`
+      ? `Previous context: ${previousContext.query} | ${previousContext.answer}${
+          previousContext.mcpSummary
+            ? ` | MCP: ${previousContext.mcpSummary.title} | ${previousContext.mcpSummary.extract} | ${previousContext.mcpSummary.image || ""}`
+            : ""
+        }`
       : null,
     `User query: ${safeQuery}`,
     userContext && userContext.userId ? `User id: ${userContext.userId}` : null

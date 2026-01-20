@@ -15,11 +15,12 @@ function getPreviousContext(userId) {
   return userContextStore.get(userId) || null;
 }
 
-function setPreviousContext(userId, query, answer) {
+function setPreviousContext(userId, query, answer, mcpSummary) {
   if (!userId) return;
   userContextStore.set(userId, {
     query,
     answer,
+    mcpSummary: mcpSummary || null,
     updatedAt: Date.now()
   });
 }
@@ -96,6 +97,20 @@ function createApp(options = {}) {
     withMcpTimeout(mcpPromise, mcpTimeoutMs)
       .then((payload) => {
         store.setMcpResults(requestId, payload);
+        const summary = payload && payload.summary ? payload.summary : null;
+        const mcpSummary = summary
+          ? {
+              title: summary.title || "",
+              extract: summary.extract || summary.description || "",
+              image: summary.originalimage && summary.originalimage.source
+            }
+          : null;
+        if (mcpSummary) {
+          const previous = getPreviousContext(userId);
+          const prevQuery = previous ? previous.query : query;
+          const prevAnswer = previous ? previous.answer : "";
+          setPreviousContext(userId, prevQuery, prevAnswer, mcpSummary);
+        }
         const duration = Date.now() - startedAt;
         console.log("mcp_ready", { requestId, durationMs: duration });
       })
