@@ -1,6 +1,6 @@
-# Search Chat (LLM Stream + MCP)
+# Search Chat (LLM Stream + Tool Calling)
 
-New service that streams an LLM answer immediately and follows up with MCP expansion when ready.
+New service that streams an LLM answer immediately and follows up with tool-calling (Wikipedia) results when ready.
 
 ## Quick start
 
@@ -85,12 +85,21 @@ Request body:
 
 ## UX Flow
 
+## Flow Summary
+
+- LLM 답변은 즉시 스트리밍됩니다.
+- 병렬로 “도구 호출 여부 + 키워드”를 판단합니다 (휴리스틱 + LLM).
+- 도구 호출이 필요하면 위키 검색을 실행합니다.
+- 결과가 준비되면 알림 팝업을 띄우고, MCP 요약(제목/요약/이미지)을 LLM 영역에 즉시 추가합니다.
+- `/mcp`는 원본 도구 결과를 그대로 반환합니다.
+
+## UX Flow
+
 - Stream the normal LLM answer via `/search?stream=true`.
-- Poll `/status` or listen to `/stream`.
+- Listen to `/stream`.
 - When ready, show the prompt:
-  - “잠깐! 유용한 검색결과가 더 있어요. 확인하시겠어요?”
-  - Buttons: “확인하기”, “닫기”
-- On confirm, call `/mcp` and render the MCP payload as-is.
+  - “유용한 검색결과가 더 있어요! 확인할래요?”
+- MCP 요약이 자동으로 LLM 영역에 추가됩니다.
 
 ## Configuration
 
@@ -107,11 +116,13 @@ OpenAI-compatible (optional):
 - `LLM_API_BASE` (default: `https://api.openai.com/v1/chat/completions`)
 - `LLM_API_KEY` (required when `LLM_PROVIDER=openai`)
 
-MCP example (Wikipedia search + summary API):
-- `MCP_USE_MOCK=1` to use the mock MCP response.
+Tool calling (Wikipedia search + summary API):
+- `MCP_USE_MOCK=1` to use the mock response.
 - `MCP_SIMULATED_DELAY_MS` (default: 2500)
 - `MCP_USER_AGENT` (optional, sent to Wikipedia API)
 - `MCP_WIKI_BASE` (default: `https://ko.wikipedia.org`)
+- `MCP_TOOL_MODE` (`simple` to skip LLM decision; default uses Codex CLI)
+- `MCP_TOOL_TIMEOUT_MS` (default: 3000)
 - `MCP_TOOL_MODE` (`simple` to skip LLM tool decision; default uses Codex CLI)
 - `MCP_TOOL_TIMEOUT_MS` (default: 3000)
 
@@ -123,5 +134,5 @@ General:
 ## Notes
 
 - This implementation stores results in memory. Replace `src/store.js` with Redis for production.
-- Replace MCP example with a real MCP server integration when ready.
+- Replace the tool-calling example with a real MCP server integration when ready.
 - NamuWiki MCP was removed because it is blocked in this hosted environment (HTTP 403).
