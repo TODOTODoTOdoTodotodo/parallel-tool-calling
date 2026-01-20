@@ -13,6 +13,7 @@ It uses a Deno runtime entry that mocks the LLM stream and runs Wikipedia tool c
    - `MCP_NAMU_BASE=https://namu.wiki`
    - `MCP_TIMEOUT_MS=8000`
    - `MCP_NAMU_MAX_CHARS=4000`
+   - `MCP_NAMU_LOCAL_URL=https://<your-bridge>/fetch`
 
 ## Notes
 

@@ -32,6 +32,7 @@ try {
 const DEFAULT_TTL_MS = Number(Deno.env.get("SEARCH_TTL_MS") || 1000 * 60 * 10);
 const MCP_TIMEOUT_MS = Number(Deno.env.get("MCP_TIMEOUT_MS") || 8000);
 const MCP_NAMU_BASE = Deno.env.get("MCP_NAMU_BASE") || "https://namu.wiki";
+const MCP_NAMU_LOCAL_URL = Deno.env.get("MCP_NAMU_LOCAL_URL") || "";
 const MCP_NAMU_MAX_CHARS = Number(Deno.env.get("MCP_NAMU_MAX_CHARS") || 4000);
 
 function createId() {
@@ -121,6 +122,18 @@ function keywordFromQuery(query: string) {
 }
 
 async function namuWikiFetch(query: string) {
+  if (MCP_NAMU_LOCAL_URL) {
+    const url = `${MCP_NAMU_LOCAL_URL}?title=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: { "x-namu-local": "1" }
+    });
+    if (!res.ok) throw new Error(`MCP_NAMU_FAILED: HTTP_${res.status}`);
+    const payload = await res.json();
+    const content = payload?.content;
+    if (!content) throw new Error("NAMU_WIKI_EMPTY");
+    return { source: "namuwiki", query, content: String(content).slice(0, MCP_NAMU_MAX_CHARS) };
+  }
+
   const url = `${MCP_NAMU_BASE}/w/${encodeURIComponent(query)}`;
   const res = await fetch(url, {
     headers: {
