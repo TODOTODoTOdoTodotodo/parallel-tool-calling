@@ -112,6 +112,8 @@ MCP example (NamuWiki article fetch):
 - `MCP_SIMULATED_DELAY_MS` (default: 2500)
 - `MCP_NAMU_BASE` (default: `https://namu.wiki`)
 - `MCP_NAMU_LOCAL_URL` (optional, e.g. `http://127.0.0.1:3890/fetch`)
+- `MCP_NAMU_TIMEOUT_MS` (default: 6000)
+- `MCP_NAMU_MAX_CHARS` (default: 4000)
 - `MCP_TOOL_MODE` (`simple` to skip LLM tool decision; default uses Codex CLI)
 - `MCP_TOOL_TIMEOUT_MS` (default: 3000)
 

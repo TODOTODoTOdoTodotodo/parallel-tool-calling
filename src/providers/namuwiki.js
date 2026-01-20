@@ -4,18 +4,24 @@ const { requestText, requestJson } = require("../utils/http");
 async function fetchNamuWiki(title) {
   const safeTitle = String(title || "").trim();
   const localUrl = process.env.MCP_NAMU_LOCAL_URL;
+  const maxChars = Number(process.env.MCP_NAMU_MAX_CHARS || 4000);
+  const timeoutMs = Number(process.env.MCP_NAMU_TIMEOUT_MS || 6000);
   if (localUrl) {
     const url = `${localUrl}?title=${encodeURIComponent(safeTitle)}`;
     const payload = await requestJson(url, {
-      headers: { "x-namu-local": "1" }
+      headers: { "x-namu-local": "1" },
+      timeoutMs
     });
-    if (!payload || !payload.content) {
+    if (!payload || payload.error) {
+      throw new Error(payload && payload.error ? payload.error : "NAMU_WIKI_EMPTY");
+    }
+    if (!payload.content) {
       throw new Error("NAMU_WIKI_EMPTY");
     }
     return {
       source: "namuwiki",
       query: safeTitle,
-      content: payload.content
+      content: payload.content.slice(0, maxChars)
     };
   }
   const encoded = encodeURIComponent(safeTitle);
@@ -28,7 +34,8 @@ async function fetchNamuWiki(title) {
       "User-Agent": "parallel-tool-calling/0.1",
       "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
       Referer: "https://namu.wiki/"
-    }
+    },
+    timeoutMs
   });
 
   const $ = cheerio.load(html);
@@ -49,7 +56,7 @@ async function fetchNamuWiki(title) {
   return {
     source: "namuwiki",
     query: safeTitle,
-    content: nodeTexts
+    content: nodeTexts.slice(0, maxChars)
   };
 }
 

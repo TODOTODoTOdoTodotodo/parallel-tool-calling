@@ -31,6 +31,11 @@ function requestJson(url, options = {}) {
       });
     });
 
+    if (options.timeoutMs) {
+      req.setTimeout(options.timeoutMs, () => {
+        req.destroy(new Error("HTTP_TIMEOUT"));
+      });
+    }
     req.on("error", reject);
     if (options.body) req.write(options.body);
     req.end();
@@ -68,6 +73,11 @@ function requestText(url, options = {}) {
       });
     });
 
+    if (options.timeoutMs) {
+      req.setTimeout(options.timeoutMs, () => {
+        req.destroy(new Error("HTTP_TIMEOUT"));
+      });
+    }
     req.on("error", reject);
     if (options.body) req.write(options.body);
     req.end();

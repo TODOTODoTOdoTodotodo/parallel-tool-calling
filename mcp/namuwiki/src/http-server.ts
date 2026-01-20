@@ -23,8 +23,10 @@ const server = createServer(async (req, res) => {
       return
     }
     const data = await fetchNamuWiki(title)
+    const maxChars = Number(process.env.MCP_NAMU_MAX_CHARS || 4000)
+    const content = data.contentHtml.slice(0, maxChars)
     res.writeHead(200, { 'content-type': 'application/json' })
-    res.end(JSON.stringify({ content: data.contentHtml }))
+    res.end(JSON.stringify({ content }))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown_error'
     res.writeHead(502, { 'content-type': 'application/json' })

@@ -32,6 +32,7 @@ try {
 const DEFAULT_TTL_MS = Number(Deno.env.get("SEARCH_TTL_MS") || 1000 * 60 * 10);
 const MCP_TIMEOUT_MS = Number(Deno.env.get("MCP_TIMEOUT_MS") || 8000);
 const MCP_NAMU_BASE = Deno.env.get("MCP_NAMU_BASE") || "https://namu.wiki";
+const MCP_NAMU_MAX_CHARS = Number(Deno.env.get("MCP_NAMU_MAX_CHARS") || 4000);
 
 function createId() {
   return crypto.randomUUID();
@@ -137,7 +138,7 @@ async function namuWikiFetch(query: string) {
     .replace(/\s+/g, " ")
     .trim();
   if (!text) throw new Error("NAMU_WIKI_EMPTY");
-  return { source: "namuwiki", query, content: text };
+  return { source: "namuwiki", query, content: text.slice(0, MCP_NAMU_MAX_CHARS) };
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {

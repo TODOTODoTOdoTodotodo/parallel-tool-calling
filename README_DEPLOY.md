@@ -12,6 +12,7 @@ It uses a Deno runtime entry that mocks the LLM stream and runs Wikipedia tool c
 5) Add env vars (optional):
    - `MCP_NAMU_BASE=https://namu.wiki`
    - `MCP_TIMEOUT_MS=8000`
+   - `MCP_NAMU_MAX_CHARS=4000`
 
 ## Notes
 
